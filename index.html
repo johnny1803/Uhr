@@ -1,0 +1,2367 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="color-scheme" content="light dark" />
+  <title>Diary</title>
+  <style>
+    :root {
+      --bg: #ebe7df;
+      --panel: #f8f5ef;
+      --panel-solid: #fffdf8;
+      --text: #252822;
+      --muted: #74766f;
+      --line: rgba(37,40,34,.12);
+      --accent: #607466;
+      --accent-2: #9daf9e;
+      --accent-soft: rgba(96,116,102,.12);
+      --danger: #a84f4f;
+      --success: #537a61;
+      --shadow: 0 18px 45px rgba(57,56,48,.10);
+      --radius: 18px;
+      --sidebar: 240px;
+      --list: 370px;
+      --font-ui: Inter, ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      --font-journal: Georgia, "Times New Roman", serif;
+    }
+
+    [data-theme="dark"] {
+      --bg: #1b1d1a;
+      --panel: #232620;
+      --panel-solid: #292c26;
+      --text: #f0eee7;
+      --muted: #abaea5;
+      --line: rgba(255,255,255,.09);
+      --accent: #a1b7a5;
+      --accent-2: #c1d0c2;
+      --accent-soft: rgba(161,183,165,.13);
+      --shadow: 0 22px 60px rgba(0,0,0,.28);
+    }
+
+    * { box-sizing: border-box; }
+    html, body { height: 100%; }
+    body {
+      margin: 0;
+      overflow: hidden;
+      background:
+        linear-gradient(180deg, rgba(255,255,255,.22), transparent 28%),
+        var(--bg);
+      color: var(--text);
+      font-family: var(--font-ui);
+    }
+
+    button, input, textarea, select { font: inherit; }
+    button { color: inherit; }
+    .hidden { display: none !important; }
+    .app { height: 100%; display: grid; grid-template-columns: var(--sidebar) var(--list) 1fr; }
+
+    .sidebar {
+      padding: 18px;
+      border-right: 1px solid var(--line);
+      background: color-mix(in srgb, var(--panel) 84%, transparent);
+      backdrop-filter: blur(24px);
+      display: flex;
+      flex-direction: column;
+      gap: 18px;
+    }
+
+    .brand { display:flex; align-items:center; gap:12px; padding:8px; }
+    .brand-mark {
+      width: 42px; height:42px; border-radius:14px;
+      display:grid; place-items:center; color:white; font-weight:800;
+      background: linear-gradient(135deg, #52655a, #7f9385);
+      box-shadow: 0 10px 24px rgba(62,80,68,.20);
+    }
+    .brand strong { display:block; font-size:18px; }
+    .brand small { color:var(--muted); }
+
+    .new-entry {
+      border:0; border-radius:16px; padding:13px 15px; cursor:pointer;
+      color:white; background:linear-gradient(135deg,#52655a,#728578);
+      box-shadow: 0 10px 24px rgba(62,80,68,.18);
+      font-weight:750;
+    }
+    .new-entry:hover { transform:translateY(-1px); }
+
+    .nav { display:flex; flex-direction:column; gap:5px; }
+    .nav button {
+      border:0; background:transparent; border-radius:13px; padding:11px 12px;
+      display:flex; align-items:center; justify-content:space-between; cursor:pointer;
+      text-align:left;
+    }
+    .nav button:hover, .nav button.active { background:var(--accent-soft); color:var(--accent); }
+    .nav .label { display:flex; align-items:center; gap:10px; }
+    .count {
+      min-width:24px; padding:2px 7px; border-radius:999px;
+      background:rgba(127,127,127,.11); color:var(--muted); font-size:12px; text-align:center;
+    }
+
+    .sidebar-footer { margin-top:auto; display:grid; gap:8px; }
+    .storage-status {
+      padding:11px 12px; border-radius:14px; border:1px solid var(--line);
+      color:var(--muted); font-size:12px; line-height:1.45;
+    }
+    .ghost {
+      border:1px solid var(--line); background:var(--panel); border-radius:13px;
+      padding:10px 12px; cursor:pointer;
+    }
+    .ghost:hover { border-color: color-mix(in srgb,var(--accent) 40%, var(--line)); }
+
+    .list-pane {
+      border-right:1px solid var(--line);
+      background:color-mix(in srgb,var(--panel-solid) 68%, transparent);
+      display:flex; flex-direction:column; min-width:0;
+    }
+    .list-header { padding:20px 18px 12px; display:grid; gap:12px; }
+    .list-title-row { display:flex; align-items:flex-end; justify-content:space-between; gap:10px; }
+    .list-title-row h1 { font-size:24px; margin:0; letter-spacing:-.03em; }
+    .list-title-row span { color:var(--muted); font-size:12px; }
+    .search-wrap { position:relative; }
+    .search-wrap input {
+      width:100%; border:1px solid var(--line); background:var(--panel);
+      color:var(--text); border-radius:14px; padding:11px 38px 11px 13px; outline:none;
+    }
+    .search-wrap input:focus { border-color:var(--accent); box-shadow:0 0 0 3px var(--accent-soft); }
+    .search-icon { position:absolute; right:13px; top:10px; color:var(--muted); }
+
+    .filters { display:flex; gap:7px; overflow:auto; padding-bottom:3px; }
+    .chip {
+      border:1px solid var(--line); background:var(--panel); border-radius:999px;
+      padding:7px 10px; white-space:nowrap; cursor:pointer; font-size:12px;
+    }
+    .chip.active { background:var(--accent); border-color:var(--accent); color:white; }
+
+    .entry-list { overflow:auto; padding:4px 12px 20px; }
+    .entry-card {
+      width:100%; border:1px solid transparent; border-radius:16px; background:transparent;
+      color:inherit; margin:5px 0; position:relative; overflow:hidden;
+    }
+    .entry-card:hover { background:rgba(127,127,127,.05); }
+    .entry-card.active { background:var(--panel); border-color:var(--line); box-shadow:0 8px 24px rgba(49,41,33,.07); }
+    .entry-open {
+      width:100%; border:0; background:transparent; color:inherit; text-align:left;
+      padding:14px 14px 10px; cursor:pointer;
+    }
+    .card-delete {
+      width:100%; border:0; border-top:1px solid var(--line); background:transparent;
+      color:var(--danger); text-align:left; padding:9px 14px; cursor:pointer; font-size:12px;
+    }
+    .card-delete:hover { background:rgba(168,79,79,.08); }
+    .word-count { margin-top:10px; color:var(--muted); font-size:11px; font-weight:700; }
+    .entry-card .date { color:var(--accent); font-size:11px; font-weight:800; text-transform:uppercase; letter-spacing:.08em; }
+    .entry-card h3 { margin:7px 0 6px; font-size:15px; }
+    .entry-card p {
+      margin:0; color:var(--muted); font-size:12px; line-height:1.5;
+      display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden;
+    }
+    .entry-meta { margin-top:10px; display:flex; gap:7px; align-items:center; flex-wrap:wrap; }
+    .tag-mini { font-size:10px; border-radius:999px; padding:3px 7px; background:var(--accent-soft); color:var(--accent); }
+    .star { position:absolute; top:14px; right:14px; color:#e0a92b; }
+
+    .main { min-width:0; overflow:hidden; position:relative; }
+    .empty-state {
+      height:100%; display:grid; place-items:center; padding:40px; text-align:center; color:var(--muted);
+    }
+    .empty-state .symbol { font-size:54px; margin-bottom:12px; }
+    .editor { height:100%; display:flex; flex-direction:column; }
+    .editor-topbar {
+      padding:14px 20px; border-bottom:1px solid var(--line);
+      display:flex; align-items:center; justify-content:space-between; gap:10px;
+      background:color-mix(in srgb,var(--panel) 70%, transparent); backdrop-filter:blur(18px);
+    }
+    .editor-actions { display:flex; gap:8px; align-items:center; }
+    .icon-btn {
+      width:39px; height:39px; border-radius:12px; border:1px solid var(--line);
+      background:var(--panel); cursor:pointer; display:grid; place-items:center;
+    }
+    .icon-btn:hover { border-color:var(--accent); }
+    .save-state { color:var(--muted); font-size:12px; }
+
+    .editor-scroll { overflow:auto; padding:36px clamp(24px,6vw,84px) 80px; }
+    .entry-date { color:var(--muted); font-size:13px; margin-bottom:10px; }
+    .meta-grid { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:10px; margin-bottom:16px; }
+    .field {
+      border:1px solid var(--line); background:var(--panel); border-radius:14px;
+      padding:9px 11px; display:grid; gap:4px;
+    }
+    .field label { font-size:10px; text-transform:uppercase; letter-spacing:.08em; color:var(--muted); }
+    .field input, .field select {
+      border:0; outline:0; background:transparent; color:var(--text); min-width:0; width:100%;
+    }
+
+    .toolbar {
+      display:flex; gap:6px; flex-wrap:wrap; padding:8px; border:1px solid var(--line);
+      border-bottom:0; border-radius:15px 15px 0 0; background:var(--panel);
+    }
+    .toolbar button {
+      border:0; background:transparent; border-radius:9px; padding:7px 9px; cursor:pointer;
+    }
+    .toolbar button:hover { background:var(--accent-soft); color:var(--accent); }
+
+    .editor-tabs { display:flex; gap:5px; margin-left:auto; }
+    .journal-input, .preview {
+      width:100%; min-height:44vh; resize:vertical; border:1px solid var(--line);
+      border-radius:0 0 16px 16px; background:var(--panel-solid); color:var(--text);
+      padding:22px; outline:none; font:18px/1.75 var(--font-journal);
+    }
+    .journal-input:focus { border-color:var(--accent); box-shadow:0 0 0 3px var(--accent-soft); }
+    .preview h1,.preview h2,.preview h3 { font-family:var(--font-ui); }
+    .preview blockquote { border-left:3px solid var(--accent); padding-left:14px; color:var(--muted); }
+    .preview code { background:rgba(127,127,127,.12); border-radius:5px; padding:2px 5px; }
+
+    .below-editor { margin-top:14px; display:grid; gap:12px; }
+    .tags-row { display:flex; gap:8px; flex-wrap:wrap; align-items:center; }
+    .tag-token {
+      display:flex; gap:6px; align-items:center; border-radius:999px;
+      background:var(--accent-soft); color:var(--accent); padding:6px 9px; font-size:12px;
+    }
+    .tag-token button { border:0; background:transparent; color:inherit; cursor:pointer; padding:0; }
+    .tag-input {
+      border:1px dashed var(--line); background:transparent; color:var(--text);
+      border-radius:999px; padding:7px 11px; outline:none; min-width:120px;
+    }
+    .attachment-list { display:flex; flex-wrap:wrap; gap:8px; }
+    .attachment {
+      border:1px solid var(--line); background:var(--panel); border-radius:12px;
+      padding:8px 10px; font-size:12px; display:flex; gap:8px; align-items:center;
+    }
+
+    .modal-backdrop {
+      position:fixed; inset:0; background:rgba(0,0,0,.38); backdrop-filter:blur(6px);
+      display:grid; place-items:center; padding:20px; z-index:100;
+    }
+    .modal {
+      width:min(760px,100%); max-height:90vh; overflow:auto; background:var(--panel-solid);
+      border:1px solid var(--line); box-shadow:var(--shadow); border-radius:24px; padding:22px;
+    }
+    .modal h2 { margin:0 0 16px; }
+    .modal-grid { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+    .modal .field { background:transparent; }
+    .modal-actions { display:flex; justify-content:flex-end; gap:8px; margin-top:18px; }
+    .primary {
+      border:0; border-radius:12px; padding:10px 14px; background:var(--accent); color:white; cursor:pointer; font-weight:700;
+    }
+    .danger { background:var(--danger); color:white; border:0; border-radius:12px; padding:10px 14px; cursor:pointer; }
+    .template-card {
+      border:1px solid var(--line); border-radius:16px; padding:14px; cursor:pointer;
+      background:var(--panel); margin:8px 0;
+    }
+    .template-card:hover { border-color:var(--accent); }
+    .stats-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:12px; }
+    .stats-five { grid-template-columns:repeat(5,minmax(0,1fr)); }
+    .stat { border:1px solid var(--line); border-radius:17px; padding:16px; background:var(--panel); }
+    .stat strong { display:block; font-size:28px; }
+    .stat span { color:var(--muted); font-size:12px; }
+    .heatmap { display:grid; grid-template-columns:repeat(14,1fr); gap:5px; margin-top:18px; }
+    .heat { aspect-ratio:1; border-radius:4px; background:rgba(127,127,127,.09); }
+    .heat[data-level="1"]{background:color-mix(in srgb,var(--accent) 25%,transparent)}
+    .heat[data-level="2"]{background:color-mix(in srgb,var(--accent) 50%,transparent)}
+    .heat[data-level="3"]{background:color-mix(in srgb,var(--accent) 75%,transparent)}
+    .heat[data-level="4"]{background:var(--accent)}
+
+    .toast {
+      position:fixed; right:20px; bottom:20px; z-index:200;
+      background:var(--text); color:var(--bg); border-radius:14px; padding:11px 14px;
+      box-shadow:var(--shadow); max-width:380px; font-size:13px;
+      animation:pop .2s ease-out;
+    }
+    @keyframes pop { from{transform:translateY(8px);opacity:0} }
+
+
+    /* Neue dreigeteilte Desktop-Oberfläche */
+    body { overflow:hidden; }
+
+    .app-shell {
+      height:100%;
+      display:grid;
+      grid-template-columns: 170px 410px minmax(0,1fr);
+      grid-template-rows: 76px minmax(0,1fr);
+      grid-template-areas:
+        "topbar topbar topbar"
+        "rail collection main";
+      background:var(--bg);
+    }
+
+    .topbar {
+      grid-area:topbar;
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:24px;
+      padding:0 22px;
+      border-bottom:1px solid var(--line);
+      background:var(--panel-solid);
+      z-index:30;
+    }
+
+    .topbar-brand { display:flex; align-items:center; gap:12px; min-width:220px; }
+    .topbar-brand strong { display:block; font-size:18px; letter-spacing:-.02em; }
+    .topbar-brand span { color:var(--muted); font-size:11px; }
+    .topbar-actions { display:flex; align-items:center; gap:8px; min-width:0; }
+    .storage-pill {
+      max-width:240px;
+      overflow:hidden;
+      text-overflow:ellipsis;
+      white-space:nowrap;
+      border:1px solid var(--line);
+      border-radius:999px;
+      padding:8px 12px;
+      color:var(--muted);
+      font-size:11px;
+      background:var(--panel);
+    }
+    .top-action {
+      border:1px solid var(--line);
+      background:transparent;
+      border-radius:11px;
+      padding:9px 11px;
+      cursor:pointer;
+      font-size:12px;
+    }
+    .top-action:hover { background:var(--accent-soft); border-color:var(--accent); }
+
+    .nav-rail {
+      grid-area:rail;
+      border-right:1px solid var(--line);
+      background:var(--panel);
+      padding:18px 12px;
+      min-width:0;
+    }
+    .nav { display:grid; gap:8px; }
+    .nav button {
+      border:0;
+      background:transparent;
+      border-radius:14px;
+      padding:12px 10px;
+      cursor:pointer;
+      display:grid;
+      grid-template-columns:26px 1fr auto;
+      align-items:center;
+      gap:8px;
+      text-align:left;
+      color:var(--muted);
+    }
+    .nav button:hover { background:rgba(127,127,127,.07); color:var(--text); }
+    .nav button.active {
+      background:var(--accent-soft);
+      color:var(--accent);
+      font-weight:750;
+    }
+    .nav-icon { font-size:15px; text-align:center; }
+
+    .collection-pane {
+      grid-area:collection;
+      min-width:0;
+      display:flex;
+      flex-direction:column;
+      border-right:1px solid var(--line);
+      background:color-mix(in srgb,var(--panel-solid) 82%,var(--bg));
+    }
+    .collection-header {
+      padding:26px 20px 14px;
+      display:grid;
+      gap:14px;
+      border-bottom:1px solid var(--line);
+      background:var(--panel-solid);
+    }
+    .collection-header h1 {
+      margin:2px 0 3px;
+      font-size:28px;
+      letter-spacing:-.04em;
+    }
+    .collection-header > div:first-child > span:last-child {
+      color:var(--muted);
+      font-size:12px;
+    }
+    .eyebrow {
+      color:var(--accent);
+      font-size:10px;
+      font-weight:850;
+      letter-spacing:.14em;
+    }
+
+    .entry-list { padding:14px; overflow:auto; }
+    .entry-card {
+      margin:0 0 12px;
+      border:1px solid var(--line);
+      border-radius:18px;
+      background:var(--panel-solid);
+      box-shadow:none;
+    }
+    .entry-card:hover { transform:translateY(-1px); box-shadow:0 10px 26px rgba(57,56,48,.08); }
+    .entry-card.active {
+      border-color:var(--accent);
+      box-shadow:0 0 0 3px var(--accent-soft);
+    }
+    .entry-open { padding:16px 16px 12px; }
+    .entry-card p {
+      font-size:13px;
+      line-height:1.65;
+      -webkit-line-clamp:3;
+    }
+    .card-delete {
+      text-align:center;
+      opacity:.75;
+    }
+    .card-delete:hover { opacity:1; }
+
+    .main {
+      grid-area:main;
+      min-width:0;
+      overflow:hidden;
+      background:var(--panel-solid);
+    }
+    .editor-topbar {
+      padding:15px 24px;
+      background:var(--panel-solid);
+    }
+    .editor-scroll {
+      max-width:980px;
+      margin:0 auto;
+      padding:42px clamp(28px,5vw,72px) 90px;
+    }
+    .entry-date {
+      font-size:12px;
+      text-transform:uppercase;
+      letter-spacing:.09em;
+      font-weight:750;
+    }
+    .meta-grid {
+      grid-template-columns:repeat(2,minmax(0,1fr));
+      gap:12px;
+      margin:18px 0;
+    }
+    .field {
+      border-radius:16px;
+      padding:11px 13px;
+      background:var(--panel);
+    }
+    .toolbar {
+      position:sticky;
+      top:0;
+      z-index:5;
+      border:1px solid var(--line);
+      border-radius:16px 16px 0 0;
+      padding:9px;
+    }
+    .journal-input,.preview {
+      min-height:52vh;
+      border-radius:0 0 18px 18px;
+      background:#fffefa;
+    }
+    [data-theme="dark"] .journal-input,
+    [data-theme="dark"] .preview { background:#252821; }
+
+    .empty-state { background:var(--panel-solid); }
+    .empty-state > div {
+      max-width:420px;
+      border:1px solid var(--line);
+      border-radius:24px;
+      padding:34px;
+      background:var(--panel);
+    }
+
+    .lock-screen {
+      position:fixed;
+      inset:0;
+      z-index:500;
+      display:grid;
+      place-items:center;
+      padding:24px;
+      background:
+        linear-gradient(180deg, rgba(255,255,255,.18), transparent),
+        var(--bg);
+    }
+    .lock-card {
+      width:min(430px,100%);
+      padding:36px;
+      border-radius:26px;
+      border:1px solid var(--line);
+      background:var(--panel-solid);
+      box-shadow:var(--shadow);
+      text-align:center;
+    }
+    .lock-logo {
+      width:62px;height:62px;border-radius:20px;
+      display:grid;place-items:center;
+      margin:0 auto 18px;
+      color:white;
+      font-size:25px;
+      font-weight:850;
+      background:linear-gradient(135deg,#52655a,#7f9385);
+    }
+    .lock-card h1 { margin:8px 0 10px; font-size:28px; letter-spacing:-.04em; }
+    .lock-card p { margin:0 auto 22px; color:var(--muted); line-height:1.6; }
+    .lock-form { display:grid; gap:10px; }
+    .lock-form input {
+      width:100%;
+      border:1px solid var(--line);
+      border-radius:14px;
+      padding:13px 14px;
+      background:var(--panel);
+      color:var(--text);
+      outline:none;
+    }
+    .lock-form input:focus { border-color:var(--accent); box-shadow:0 0 0 3px var(--accent-soft); }
+    .lock-error {
+      color:var(--danger);
+      background:rgba(168,79,79,.08);
+      border-radius:12px;
+      padding:9px 10px;
+      font-size:12px;
+    }
+
+    @media (max-width: 1180px) {
+      .stats-five { grid-template-columns:repeat(2,minmax(0,1fr)); }
+    }
+    @media (max-width: 980px) {
+      :root { --sidebar: 76px; --list: 330px; }
+      .brand-text, .nav .label span, .sidebar-footer .storage-status, .sidebar-footer .ghost span, .new-entry span { display:none; }
+      .sidebar { padding:14px 10px; align-items:stretch; }
+      .brand { justify-content:center; }
+      .new-entry { padding:13px; }
+      .nav button { justify-content:center; }
+      .count { display:none; }
+    }
+    @media (max-width: 720px) {
+      body { overflow:auto; }
+      .app { display:block; height:auto; min-height:100%; }
+      .sidebar { position:sticky; top:0; z-index:50; height:auto; flex-direction:row; border-right:0; border-bottom:1px solid var(--line); }
+      .brand, .sidebar-footer, .nav button:not([data-view="entries"]) { display:none; }
+      .nav { flex:1; flex-direction:row; }
+      .new-entry { width:48px; }
+      .list-pane { border-right:0; min-height:36vh; }
+      .main { min-height:64vh; }
+      .meta-grid, .modal-grid, .stats-grid { grid-template-columns:1fr 1fr; }
+    }
+  
+    @media (max-width: 1050px) {
+      .app-shell {
+        grid-template-columns: 82px 360px minmax(0,1fr);
+      }
+      .nav button {
+        grid-template-columns:1fr;
+        justify-items:center;
+        padding:12px 6px;
+      }
+      .nav button span:nth-child(2), .nav .count { display:none; }
+      .storage-pill { display:none; }
+    }
+
+    @media (max-width: 760px) {
+      body { overflow:auto; }
+      .app-shell {
+        height:auto;
+        min-height:100%;
+        display:grid;
+        grid-template-columns:1fr;
+        grid-template-rows:auto auto auto minmax(60vh,auto);
+        grid-template-areas:
+          "topbar"
+          "rail"
+          "collection"
+          "main";
+      }
+      .topbar {
+        min-height:70px;
+        padding:12px 14px;
+        align-items:flex-start;
+      }
+      .topbar-brand span, .top-action, .storage-pill { display:none; }
+      .topbar-actions { margin-left:auto; }
+      .new-entry { white-space:nowrap; }
+      .nav-rail {
+        border-right:0;
+        border-bottom:1px solid var(--line);
+        padding:8px 10px;
+        overflow:auto;
+      }
+      .nav {
+        display:flex;
+        min-width:max-content;
+      }
+      .nav button {
+        min-width:58px;
+        grid-template-columns:1fr;
+      }
+      .collection-pane { border-right:0; max-height:46vh; }
+      .collection-header { padding:18px 14px 12px; }
+      .main { min-height:60vh; }
+      .editor-scroll { padding:24px 16px 70px; }
+      .meta-grid { grid-template-columns:1fr; }
+      .editor-actions .icon-btn { display:none; }
+      .lock-card { padding:28px 22px; }
+    }
+
+  
+    .tag-page-header {
+      display:flex;
+      align-items:flex-end;
+      justify-content:space-between;
+      gap:20px;
+      margin-bottom:20px;
+    }
+    .tag-page-header h1 { margin:4px 0 6px; font-size:36px; letter-spacing:-.045em; }
+    .tag-page-header p, .tag-result-header p { margin:0; color:var(--muted); }
+    .tag-summary {
+      border:1px solid var(--line);
+      border-radius:999px;
+      padding:8px 12px;
+      color:var(--muted);
+      font-size:12px;
+      background:var(--panel);
+    }
+    .tag-search-row { margin-bottom:16px; }
+    .tag-search-row input {
+      width:100%;
+      border:1px solid var(--line);
+      background:var(--panel);
+      color:var(--text);
+      border-radius:14px;
+      padding:12px 14px;
+      outline:none;
+    }
+    .tag-search-row input:focus {
+      border-color:var(--accent);
+      box-shadow:0 0 0 3px var(--accent-soft);
+    }
+    .tag-layout {
+      display:grid;
+      grid-template-columns:minmax(240px,320px) minmax(0,1fr);
+      gap:18px;
+      min-height:560px;
+    }
+    .tag-browser, .tag-results {
+      border:1px solid var(--line);
+      border-radius:20px;
+      background:var(--panel);
+      overflow:hidden;
+    }
+    .tag-list { padding:8px; max-height:640px; overflow:auto; }
+    .tag-list-item {
+      display:grid;
+      grid-template-columns:minmax(0,1fr) 42px;
+      align-items:center;
+      border-radius:14px;
+      overflow:hidden;
+    }
+    .tag-list-item:hover, .tag-list-item.active { background:var(--accent-soft); }
+    .tag-main {
+      display:grid;
+      grid-template-columns:30px minmax(0,1fr);
+      grid-template-rows:auto auto;
+      column-gap:8px;
+      width:100%;
+      border:0;
+      background:transparent;
+      color:inherit;
+      text-align:left;
+      padding:12px;
+      cursor:pointer;
+    }
+    .tag-symbol {
+      grid-row:1 / span 2;
+      width:28px;
+      height:28px;
+      display:grid;
+      place-items:center;
+      border-radius:9px;
+      background:var(--accent);
+      color:white;
+      font-weight:850;
+    }
+    .tag-name { font-weight:750; overflow:hidden; text-overflow:ellipsis; }
+    .tag-entry-count { color:var(--muted); font-size:11px; margin-top:2px; }
+    .tag-menu-button {
+      border:0;
+      background:transparent;
+      color:var(--muted);
+      height:100%;
+      cursor:pointer;
+    }
+    .tag-menu-button:hover { color:var(--text); }
+    .tag-results { padding:20px; overflow:auto; }
+    .tag-results-empty, .tag-empty {
+      height:100%;
+      min-height:320px;
+      display:grid;
+      place-content:center;
+      text-align:center;
+      color:var(--muted);
+      padding:30px;
+    }
+    .tag-empty div, .tag-large-symbol {
+      font-size:42px;
+      color:var(--accent);
+      margin-bottom:10px;
+    }
+    .tag-result-header {
+      display:flex;
+      align-items:flex-end;
+      justify-content:space-between;
+      gap:16px;
+      padding-bottom:18px;
+      border-bottom:1px solid var(--line);
+    }
+    .tag-result-header h2 { margin:4px 0 5px; font-size:28px; }
+    .tag-entry-grid { display:grid; gap:10px; padding-top:16px; }
+    .tag-entry-card {
+      border:1px solid var(--line);
+      border-radius:15px;
+      background:var(--panel-solid);
+      color:inherit;
+      padding:14px;
+      text-align:left;
+      cursor:pointer;
+    }
+    .tag-entry-card:hover { border-color:var(--accent); transform:translateY(-1px); }
+    .tag-entry-card span { color:var(--accent); font-size:11px; font-weight:800; }
+    .tag-entry-card p {
+      margin:8px 0;
+      color:var(--text);
+      line-height:1.55;
+      display:-webkit-box;
+      -webkit-line-clamp:2;
+      -webkit-box-orient:vertical;
+      overflow:hidden;
+    }
+    .tag-entry-card strong { color:var(--muted); font-size:11px; }
+
+  
+    @media (max-width: 900px) {
+      .tag-layout { grid-template-columns:1fr; }
+      .tag-browser { max-height:300px; }
+    }
+
+  
+    .template-insert-btn {
+      width:auto !important;
+      padding:0 12px !important;
+      font-weight:750;
+      color:var(--accent) !important;
+      border-left:1px solid var(--line) !important;
+      border-radius:0 !important;
+    }
+    .templates-page-header {
+      display:flex;
+      justify-content:space-between;
+      align-items:flex-end;
+      gap:20px;
+      margin-bottom:22px;
+    }
+    .templates-page-header h1 { margin:4px 0 6px; font-size:36px; letter-spacing:-.045em; }
+    .templates-page-header p { color:var(--muted); margin:0; max-width:650px; line-height:1.55; }
+    .templates-manage-grid {
+      display:grid;
+      grid-template-columns:repeat(auto-fill,minmax(290px,1fr));
+      gap:16px;
+    }
+    .template-manage-card {
+      min-height:310px;
+      display:flex;
+      flex-direction:column;
+      border:1px solid var(--line);
+      border-radius:20px;
+      background:var(--panel);
+      overflow:hidden;
+    }
+    .template-card-top {
+      display:flex;
+      align-items:center;
+      gap:12px;
+      padding:16px;
+      border-bottom:1px solid var(--line);
+      background:var(--panel-solid);
+    }
+    .template-card-top > div { min-width:0; }
+    .template-card-top strong { display:block; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .template-card-top small { display:block; margin-top:3px; color:var(--muted); }
+    .template-card-symbol, .template-picker-icon {
+      width:34px;height:34px;display:grid;place-items:center;
+      border-radius:11px;background:var(--accent-soft);color:var(--accent);font-weight:850;
+      flex:none;
+    }
+    .template-preview {
+      flex:1;
+      max-height:220px;
+      overflow:hidden;
+      padding:18px;
+      line-height:1.55;
+      color:var(--muted);
+      mask-image:linear-gradient(to bottom,#000 75%,transparent);
+    }
+    .template-preview h1,.template-preview h2,.template-preview h3 { color:var(--text); margin:4px 0 8px; font-size:16px; }
+    .template-card-actions {
+      display:flex;
+      gap:7px;
+      flex-wrap:wrap;
+      padding:12px;
+      border-top:1px solid var(--line);
+    }
+    .template-card-actions button { flex:1; white-space:nowrap; }
+    .templates-empty {
+      grid-column:1/-1;
+      min-height:390px;
+      display:grid;
+      place-content:center;
+      justify-items:center;
+      text-align:center;
+      border:1px dashed var(--line);
+      border-radius:22px;
+      color:var(--muted);
+      padding:30px;
+    }
+    .templates-empty > div { font-size:46px; color:var(--accent); }
+    .template-content-field { margin-top:12px; }
+    .template-content-field textarea {
+      width:100%;
+      min-height:280px;
+      resize:vertical;
+      border:0;
+      outline:none;
+      background:transparent;
+      color:var(--text);
+      font:15px/1.65 var(--font-journal);
+    }
+    .template-help { color:var(--muted); font-size:12px; line-height:1.55; }
+    .template-picker-heading {
+      display:flex;
+      justify-content:space-between;
+      gap:20px;
+      align-items:flex-start;
+      margin-bottom:16px;
+    }
+    .template-picker-heading h2 { margin:4px 0 6px; }
+    .template-picker-heading p { margin:0;color:var(--muted);line-height:1.55; }
+    .template-picker-list { display:grid; gap:8px; max-height:480px; overflow:auto; }
+    .template-picker-item {
+      display:grid;
+      grid-template-columns:42px minmax(0,1fr);
+      align-items:center;
+      gap:10px;
+      width:100%;
+      text-align:left;
+      border:1px solid var(--line);
+      border-radius:15px;
+      background:var(--panel);
+      color:inherit;
+      padding:12px;
+      cursor:pointer;
+    }
+    .template-picker-item:hover { border-color:var(--accent); background:var(--accent-soft); }
+    .template-picker-item strong,.template-picker-item small { display:block; }
+    .template-picker-item small {
+      margin-top:4px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+    }
+
+  
+    .folder-diagnostic {
+      display:grid;
+      grid-template-columns:repeat(2,minmax(0,1fr));
+      gap:9px;
+      margin:18px 0;
+    }
+    .folder-diagnostic > div {
+      border:1px solid var(--line);
+      border-radius:13px;
+      padding:11px 12px;
+      background:var(--panel);
+    }
+    .folder-diagnostic span,
+    .folder-diagnostic strong { display:block; }
+    .folder-diagnostic span { color:var(--muted);font-size:10px;text-transform:uppercase;letter-spacing:.08em; }
+    .folder-diagnostic strong { margin-top:4px;font-size:12px;overflow-wrap:anywhere; }
+
+  </style>
+</head>
+<body>
+<div class="app-shell" id="app">
+  <header class="topbar">
+    <div class="topbar-brand">
+      <div class="brand-mark">D</div>
+      <div>
+        <strong>Diary</strong>
+        <span>Dein persönlicher Rückzugsort</span>
+      </div>
+    </div>
+
+    <div class="topbar-actions">
+      <div class="storage-pill" id="storageStatus">Lokaler App-Speicher</div>
+      <button class="top-action" id="chooseFolderBtn">Ordner wählen</button>
+      <button class="top-action" id="lockNowBtn">Sperren</button>
+      <button class="top-action" id="settingsBtn">Einstellungen</button>
+      <button class="new-entry" id="newEntryBtn">＋ Neuer Eintrag</button>
+    </div>
+  </header>
+
+  <aside class="nav-rail">
+    <nav class="nav">
+      <button class="active" data-view="entries"><span class="nav-icon">◫</span><span>Einträge</span><span class="count" id="allCount">0</span></button>
+      <button data-view="tags"><span class="nav-icon">#</span><span>Tags</span><span class="count" id="tagCount">0</span></button>
+      <button data-view="onthisday"><span class="nav-icon">◷</span><span>An diesem Tag</span><span class="count" id="onThisDayCount">0</span></button>
+      <button data-view="calendar"><span class="nav-icon">▦</span><span>Kalender</span></button>
+      <button data-view="stats"><span class="nav-icon">◩</span><span>Statistik</span></button>
+      <button data-view="templates"><span class="nav-icon">✦</span><span>Vorlagen</span></button>
+    </nav>
+  </aside>
+
+  <section class="collection-pane">
+    <div class="collection-header">
+      <div>
+        <span class="eyebrow">TAGEBUCH</span>
+        <h1 id="viewTitle">Einträge</h1>
+        <span id="resultCount">0 Einträge</span>
+      </div>
+      <div class="search-wrap">
+        <input id="searchInput" type="search" placeholder="Text, Tags, Ort …" />
+        <span class="search-icon">⌕</span>
+      </div>
+      <div class="filters">
+        <button class="chip active" data-filter="all">Alle</button>
+        <button class="chip" data-filter="today">Heute</button>
+        <button class="chip" data-filter="week">7 Tage</button>
+        <button class="chip" data-filter="month">30 Tage</button>
+        <button class="chip" data-filter="hasPhoto">Anhänge</button>
+      </div>
+    </div>
+    <div class="entry-list" id="entryList"></div>
+  </section>
+
+  <main class="main" id="mainPane">
+    <div class="empty-state" id="emptyState">
+      <div>
+        <div class="symbol">✍️</div>
+        <h2>Halte fest, was zählt.</h2>
+        <p>Erstelle einen Eintrag oder wähle links einen bestehenden aus.</p>
+      </div>
+    </div>
+
+    <section class="editor hidden" id="editor">
+      <div class="editor-topbar">
+        <div class="save-state" id="saveState">Bereit</div>
+        <div class="editor-actions">
+          <button class="icon-btn" id="favoriteBtn" title="Favorit">☆</button>
+          <button class="icon-btn" id="duplicateBtn" title="Duplizieren">⧉</button>
+          <button class="icon-btn" id="exportEntryBtn" title="Eintrag exportieren">⇩</button>
+          <button class="danger" id="deleteBtn" title="Eintrag löschen">Eintrag löschen</button>
+        </div>
+      </div>
+
+      <div class="editor-scroll">
+        <div class="entry-date" id="entryDateLabel"></div>
+
+        <div class="meta-grid">
+          <div class="field"><label>Datum & Uhrzeit</label><input type="datetime-local" id="dateInput"></div>
+          <div class="field"><label>Stimmung</label>
+            <select id="moodInput">
+              <option value="">–</option><option>😄 Großartig</option><option>🙂 Gut</option>
+              <option>😐 Neutral</option><option>😔 Traurig</option><option>😣 Schwer</option>
+            </select>
+          </div>
+          <div class="field"><label>Wetter</label><input id="weatherInput" placeholder="z. B. 18 °C, sonnig"></div>
+          <div class="field"><label>Ort</label><input id="locationInput" placeholder="Ort oder Adresse"></div>
+        </div>
+
+        <div class="toolbar">
+          <button data-md="**|**"><b>B</b></button>
+          <button data-md="*|*"><i>I</i></button>
+          <button data-md="# |">H1</button>
+          <button data-md="## |">H2</button>
+          <button data-md="- |">• Liste</button>
+          <button data-md="> |">❝</button>
+          <button data-md="`|`">Code</button>
+          <button data-md="[|](https://)">Link</button>
+          <button id="insertTemplateBtn" class="template-insert-btn">✦ Vorlage</button>
+          <div class="editor-tabs">
+            <button id="writeTab">Schreiben</button>
+            <button id="previewTab">Vorschau</button>
+          </div>
+        </div>
+        <textarea class="journal-input" id="contentInput" placeholder="Was ist heute passiert?"></textarea>
+        <div class="preview hidden" id="preview"></div>
+
+        <div class="below-editor">
+          <div class="tags-row" id="tagsRow">
+            <input class="tag-input" id="tagInput" placeholder="+ Tag hinzufügen">
+          </div>
+          <div>
+            <button class="ghost" id="attachBtn">📎 Anhang hinzufügen</button>
+            <input type="file" id="attachmentInput" multiple class="hidden">
+          </div>
+          <div class="attachment-list" id="attachmentList"></div>
+        </div>
+      </div>
+    </section>
+  </main>
+</div>
+
+<div class="modal-backdrop hidden" id="modalBackdrop">
+  <div class="modal" id="modal"></div>
+</div>
+
+<div class="lock-screen hidden" id="lockScreen">
+  <div class="lock-card">
+    <div class="lock-logo">D</div>
+    <span class="eyebrow">PRIVATES TAGEBUCH</span>
+    <h1 id="lockTitle">Diary ist gesperrt</h1>
+    <p id="lockDescription">Gib dein Passwort ein, um deine Einträge zu öffnen.</p>
+    <div class="lock-form">
+      <input type="password" id="lockPasswordInput" placeholder="Passwort" autocomplete="current-password">
+      <input type="password" id="lockPasswordConfirm" class="hidden" placeholder="Passwort wiederholen" autocomplete="new-password">
+      <button class="primary" id="unlockBtn">Entsperren</button>
+      <div class="lock-error hidden" id="lockError"></div>
+    </div>
+  </div>
+</div>
+
+<input id="folderFallbackInput" type="file" webkitdirectory multiple hidden>
+<div class="toast hidden" id="toast"></div>
+
+<script>
+(() => {
+  'use strict';
+
+  const state = {
+    entries: [],
+    selectedId: null,
+    view: 'entries',
+    filter: 'all',
+    query: '',
+    selectedTag: null,
+    templates: [],
+    nativeFileBridge: null,
+    directoryHandle: null,
+    storageMode: 'local',
+    autosaveTimer: null,
+    lockTimer: null,
+    isLocked: false,
+    settings: {
+      theme: localStorage.getItem('diary-theme') || 'system',
+      autosave: true,
+      fileExtension: 'txt',
+      dateFormat: 'de-DE',
+      folderName: '',
+      passwordEnabled: localStorage.getItem('diary-password-enabled') === 'true',
+      autoLockMinutes: Number(localStorage.getItem('diary-auto-lock') || 0)
+    }
+  };
+
+  const $ = s => document.querySelector(s);
+  const $$ = s => [...document.querySelectorAll(s)];
+  const el = {
+    entryList: $('#entryList'), editor: $('#editor'), emptyState: $('#emptyState'),
+    contentInput: $('#contentInput'), dateInput: $('#dateInput'),
+    moodInput: $('#moodInput'), weatherInput: $('#weatherInput'), locationInput: $('#locationInput'),
+    tagsRow: $('#tagsRow'), tagInput: $('#tagInput'), attachmentList: $('#attachmentList'),
+    saveState: $('#saveState'), storageStatus: $('#storageStatus'), resultCount: $('#resultCount'),
+    viewTitle: $('#viewTitle'), favoriteBtn: $('#favoriteBtn'), entryDateLabel: $('#entryDateLabel'),
+    searchInput: $('#searchInput'), preview: $('#preview'), modalBackdrop: $('#modalBackdrop'),
+    modal: $('#modal'), toast: $('#toast'),
+    lockScreen: $('#lockScreen'), lockPasswordInput: $('#lockPasswordInput'),
+    lockPasswordConfirm: $('#lockPasswordConfirm'), lockTitle: $('#lockTitle'),
+    lockDescription: $('#lockDescription'), lockError: $('#lockError')
+  };
+
+
+  async function hashPassword(password) {
+    const data = new TextEncoder().encode(password);
+    const digest = await crypto.subtle.digest('SHA-256', data);
+    return [...new Uint8Array(digest)].map(b => b.toString(16).padStart(2,'0')).join('');
+  }
+
+  function showLock(mode='unlock') {
+    state.isLocked = true;
+    el.lockScreen.dataset.mode = mode;
+    el.lockScreen.classList.remove('hidden');
+    el.lockPasswordInput.value = '';
+    el.lockPasswordConfirm.value = '';
+    el.lockError.classList.add('hidden');
+
+    if (mode === 'setup') {
+      el.lockTitle.textContent = 'Passwort einrichten';
+      el.lockDescription.textContent = 'Lege ein Passwort fest, mit dem Diary beim Start geschützt wird.';
+      el.lockPasswordConfirm.classList.remove('hidden');
+      $('#unlockBtn').textContent = 'Passwort speichern';
+    } else {
+      el.lockTitle.textContent = 'Diary ist gesperrt';
+      el.lockDescription.textContent = 'Gib dein Passwort ein, um deine Einträge zu öffnen.';
+      el.lockPasswordConfirm.classList.add('hidden');
+      $('#unlockBtn').textContent = 'Entsperren';
+    }
+    setTimeout(() => el.lockPasswordInput.focus(), 0);
+  }
+
+  function hideLock() {
+    state.isLocked = false;
+    el.lockScreen.classList.add('hidden');
+    resetAutoLock();
+  }
+
+  function showLockError(message) {
+    el.lockError.textContent = message;
+    el.lockError.classList.remove('hidden');
+  }
+
+  async function handleUnlock() {
+    const mode = el.lockScreen.dataset.mode || 'unlock';
+    const password = el.lockPasswordInput.value;
+
+    if (mode === 'setup') {
+      const confirmPassword = el.lockPasswordConfirm.value;
+      if (password.length < 4) return showLockError('Das Passwort muss mindestens 4 Zeichen lang sein.');
+      if (password !== confirmPassword) return showLockError('Die Passwörter stimmen nicht überein.');
+      localStorage.setItem('diary-password-hash', await hashPassword(password));
+      localStorage.setItem('diary-password-enabled', 'true');
+      state.settings.passwordEnabled = true;
+      saveLocal();
+      hideLock();
+      toast('Passwortschutz aktiviert');
+      return;
+    }
+
+    const storedHash = localStorage.getItem('diary-password-hash');
+    if (!storedHash) {
+      hideLock();
+      return;
+    }
+    if (await hashPassword(password) !== storedHash) {
+      showLockError('Das Passwort ist nicht korrekt.');
+      return;
+    }
+    hideLock();
+  }
+
+  function lockNow() {
+    if (!state.settings.passwordEnabled) {
+      showLock('setup');
+      return;
+    }
+    showLock('unlock');
+  }
+
+  function resetAutoLock() {
+    clearTimeout(state.lockTimer);
+    const minutes = Number(state.settings.autoLockMinutes || 0);
+    if (!state.settings.passwordEnabled || !minutes || state.isLocked) return;
+    state.lockTimer = setTimeout(() => showLock('unlock'), minutes * 60 * 1000);
+  }
+
+  async function removePasswordProtection() {
+    const current = prompt('Aktuelles Passwort eingeben, um den Schutz zu entfernen:');
+    if (current === null) return false;
+    const storedHash = localStorage.getItem('diary-password-hash');
+    if (await hashPassword(current) !== storedHash) {
+      toast('Passwort nicht korrekt');
+      return false;
+    }
+    localStorage.removeItem('diary-password-hash');
+    localStorage.setItem('diary-password-enabled', 'false');
+    state.settings.passwordEnabled = false;
+    saveLocal();
+    toast('Passwortschutz entfernt');
+    return true;
+  }
+
+  const defaultTemplates = [
+    { id:'daily-reflection', name:'Tägliche Reflexion', content:'## Heute bin ich dankbar für\n\n- \n\n## Das hat mich beschäftigt\n\n\n## Das möchte ich morgen anders machen\n\n', createdAt:new Date().toISOString(), updatedAt:new Date().toISOString() },
+    { id:'morning-routine', name:'Morgenroutine', content:'## Meine Intention für heute\n\n\n## Drei Prioritäten\n\n1. \n2. \n3. \n\n## Wie möchte ich mich heute fühlen?\n\n', createdAt:new Date().toISOString(), updatedAt:new Date().toISOString() },
+    { id:'weekly-review', name:'Wochenrückblick', content:'## Höhepunkte\n\n\n## Herausforderungen\n\n\n## Was habe ich gelernt?\n\n\n## Fokus für nächste Woche\n\n', createdAt:new Date().toISOString(), updatedAt:new Date().toISOString() }
+  ];
+
+  function normalizeTemplate(template) {
+    return {
+      id: template.id || uid(),
+      name: (template.name || 'Neue Vorlage').trim(),
+      content: template.content ?? template.text ?? '',
+      createdAt: template.createdAt || new Date().toISOString(),
+      updatedAt: template.updatedAt || new Date().toISOString()
+    };
+  }
+
+  function saveTemplates() {
+    localStorage.setItem('diary-templates', JSON.stringify(state.templates));
+  }
+
+  function loadTemplates() {
+    const saved = JSON.parse(localStorage.getItem('diary-templates') || 'null');
+    state.templates = Array.isArray(saved) && saved.length
+      ? saved.map(normalizeTemplate)
+      : defaultTemplates.map(template => normalizeTemplate({...template}));
+    saveTemplates();
+  }
+
+  function uid() {
+    return crypto.randomUUID ? crypto.randomUUID() : Date.now().toString(36) + Math.random().toString(36).slice(2);
+  }
+
+  function nowLocalInput(d = new Date()) {
+    const z = n => String(n).padStart(2,'0');
+    return `${d.getFullYear()}-${z(d.getMonth()+1)}-${z(d.getDate())}T${z(d.getHours())}:${z(d.getMinutes())}`;
+  }
+
+  function applyTheme() {
+    const theme = state.settings.theme;
+    const actual = theme === 'system'
+      ? (matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light')
+      : theme;
+    document.documentElement.dataset.theme = actual;
+  }
+
+  function toast(message) {
+    el.toast.textContent = message;
+    el.toast.classList.remove('hidden');
+    clearTimeout(toast.timer);
+    toast.timer = setTimeout(() => el.toast.classList.add('hidden'), 2600);
+  }
+
+  function escapeHtml(s='') {
+    return s.replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[c]));
+  }
+
+  function markdown(src='') {
+    let out = escapeHtml(src);
+    out = out
+      .replace(/^### (.*)$/gm,'<h3>$1</h3>')
+      .replace(/^## (.*)$/gm,'<h2>$1</h2>')
+      .replace(/^# (.*)$/gm,'<h1>$1</h1>')
+      .replace(/^> (.*)$/gm,'<blockquote>$1</blockquote>')
+      .replace(/^\- (.*)$/gm,'<li>$1</li>')
+      .replace(/\*\*(.+?)\*\*/g,'<strong>$1</strong>')
+      .replace(/\*(.+?)\*/g,'<em>$1</em>')
+      .replace(/`(.+?)`/g,'<code>$1</code>')
+      .replace(/\[(.+?)\]\((https?:\/\/[^\s)]+)\)/g,'<a href="$2" target="_blank" rel="noopener">$1</a>')
+      .replace(/\n/g,'<br>');
+    out = out.replace(/(?:<li>.*?<\/li><br>)+/gs, m => '<ul>' + m.replace(/<br>/g,'') + '</ul>');
+    return out;
+  }
+
+  function normalizeEntry(e) {
+    return {
+      id: e.id || uid(),
+      content: e.content || '',
+      createdAt: e.createdAt || new Date().toISOString(),
+      updatedAt: e.updatedAt || new Date().toISOString(),
+      entryDate: e.entryDate || new Date().toISOString(),
+      mood: e.mood || '',
+      weather: e.weather || '',
+      location: e.location || '',
+      tags: Array.isArray(e.tags) ? e.tags : [],
+      favorite: !!e.favorite,
+      attachments: Array.isArray(e.attachments) ? e.attachments : [],
+      wordCount: e.wordCount || 0
+    };
+  }
+
+  function serializeEntry(e) {
+    const lines = [
+      `DIARY_ENTRY_V1`,
+      `id: ${e.id}`,
+      `entryDate: ${e.entryDate}`,
+      `createdAt: ${e.createdAt}`,
+      `updatedAt: ${e.updatedAt}`,
+      `mood: ${e.mood}`,
+      `weather: ${e.weather}`,
+      `location: ${e.location}`,
+      `favorite: ${e.favorite}`,
+      `tags: ${JSON.stringify(e.tags)}`,
+      `attachments: ${JSON.stringify(e.attachments)}`,
+      `---`,
+      e.content
+    ];
+    return lines.join('\n');
+  }
+
+  function parseEntry(text, filename='') {
+    if (!text.startsWith('DIARY_ENTRY_V1')) {
+      return normalizeEntry({
+        content: text,
+        entryDate: new Date().toISOString()
+      });
+    }
+    const [head, ...body] = text.split('\n---\n');
+    const meta = {};
+    head.split('\n').slice(1).forEach(line => {
+      const i = line.indexOf(':');
+      if (i > 0) meta[line.slice(0,i).trim()] = line.slice(i+1).trim();
+    });
+    let tags = [], attachments = [];
+    try { tags = JSON.parse(meta.tags || '[]'); } catch {}
+    try { attachments = JSON.parse(meta.attachments || '[]'); } catch {}
+    return normalizeEntry({
+      id: meta.id, content: body.join('\n---\n'),
+      entryDate: meta.entryDate, createdAt: meta.createdAt, updatedAt: meta.updatedAt,
+      mood: meta.mood, weather: meta.weather, location: meta.location,
+      favorite: meta.favorite === 'true', tags, attachments
+    });
+  }
+
+  function safeFileName(e) {
+    const date = new Date(e.entryDate).toISOString().slice(0,10);
+    return `${date}_Eintrag_${e.id.slice(0,8)}.${state.settings.fileExtension}`;
+  }
+
+  function saveLocal() {
+    localStorage.setItem('diary-entries', JSON.stringify(state.entries));
+    localStorage.setItem('diary-settings', JSON.stringify(state.settings));
+  }
+
+  async function openDb() {
+    return new Promise((resolve,reject) => {
+      const req = indexedDB.open('diary-db', 1);
+      req.onupgradeneeded = () => req.result.createObjectStore('handles');
+      req.onsuccess = () => resolve(req.result);
+      req.onerror = () => reject(req.error);
+    });
+  }
+
+  async function persistDirectoryHandle(handle) {
+    try {
+      const db = await openDb();
+      const tx = db.transaction('handles','readwrite');
+      tx.objectStore('handles').put(handle,'diary-directory');
+      await new Promise((res,rej) => { tx.oncomplete=res; tx.onerror=()=>rej(tx.error); });
+    } catch (e) { console.warn('Handle konnte nicht gespeichert werden', e); }
+  }
+
+  function getNativeFileBridge() {
+    const candidates = [
+      window.diaryBridge,
+      window.electronAPI,
+      window.desktopAPI,
+      window.nativeAPI,
+      window.appBridge
+    ].filter(Boolean);
+
+    for (const bridge of candidates) {
+      const choose = bridge.chooseDirectory || bridge.selectDirectory || bridge.openDirectory;
+      const write = bridge.writeTextFile || bridge.writeFile;
+      if (typeof choose === 'function' && typeof write === 'function') {
+        return {
+          raw: bridge,
+          chooseDirectory: (...args) => choose.apply(bridge, args),
+          writeTextFile: (...args) => write.apply(bridge, args),
+          deleteFile: bridge.deleteFile ? (...args) => bridge.deleteFile(...args) : null,
+          readTextFiles: bridge.readTextFiles ? (...args) => bridge.readTextFiles(...args) : null,
+          writeBinaryFile: bridge.writeBinaryFile ? (...args) => bridge.writeBinaryFile(...args) : null
+        };
+      }
+    }
+    return null;
+  }
+
+  async function chooseDirectoryWithTauri() {
+    const tauri = window.__TAURI__;
+    if (!tauri) return null;
+
+    // Supports the official dialog plugin when it was exposed to the webview.
+    const open = tauri.dialog?.open || tauri.plugin?.dialog?.open;
+    if (typeof open === 'function') {
+      const selected = await open({directory:true, multiple:false});
+      if (!selected) return null;
+      return {path:Array.isArray(selected) ? selected[0] : selected, name:String(selected).split(/[\\/]/).pop()};
+    }
+
+    // Optional app command fallback.
+    const invoke = tauri.core?.invoke || tauri.invoke;
+    if (typeof invoke === 'function') {
+      try {
+        const selected = await invoke('choose_diary_directory');
+        if (!selected) return null;
+        return typeof selected === 'string'
+          ? {path:selected, name:selected.split(/[\\/]/).pop()}
+          : selected;
+      } catch (error) {
+        console.warn('Tauri directory command is not installed:', error);
+      }
+    }
+    return null;
+  }
+
+  async function restoreDirectoryHandle() {
+    try {
+      const db = await openDb();
+      const tx = db.transaction('handles','readonly');
+      const req = tx.objectStore('handles').get('diary-directory');
+      const handle = await new Promise((res,rej)=>{req.onsuccess=()=>res(req.result);req.onerror=()=>rej(req.error);});
+      if (!handle) return;
+
+      const permission = typeof handle.queryPermission === 'function'
+        ? await handle.queryPermission({mode:'readwrite'})
+        : 'prompt';
+
+      state.directoryHandle = handle;
+      state.storageMode = 'directory';
+      state.settings.folderName = handle.name || state.settings.folderName;
+      updateStorageStatus();
+
+      if (permission !== 'granted') {
+        el.storageStatus.textContent = `Ordner: ${handle.name || 'verbunden'} · Zugriff erneut bestätigen`;
+      }
+    } catch (error) {
+      console.warn('Gespeicherter Ordner konnte nicht wiederhergestellt werden:', error);
+    }
+  }
+
+  function showFolderSupportDialog() {
+    const secure = window.isSecureContext ? 'Ja' : 'Nein';
+    const protocol = location.protocol;
+    showModal(`
+      <span class="eyebrow">DATEIZUGRIFF</span>
+      <h2>Diese Umgebung kann keinen beschreibbaren Ordner öffnen</h2>
+      <p style="color:var(--muted);line-height:1.65">
+        Diary benötigt entweder die Chromium File System Access API oder eine native
+        Dateibrücke der Desktop-App. Ein gewöhnliches WebView oder ein eingebetteter
+        Browser erlaubt aus Sicherheitsgründen keinen freien Schreibzugriff auf Ordner.
+      </p>
+      <div class="folder-diagnostic">
+        <div><span>Protokoll</span><strong>${escapeHtml(protocol)}</strong></div>
+        <div><span>Sicherer Kontext</span><strong>${secure}</strong></div>
+        <div><span>Ordner-API</span><strong>${typeof window.showDirectoryPicker === 'function' ? 'Verfügbar' : 'Nicht verfügbar'}</strong></div>
+        <div><span>Native Bridge</span><strong>${getNativeFileBridge() || window.__TAURI__ ? 'Erkannt' : 'Nicht erkannt'}</strong></div>
+      </div>
+      <p class="template-help">
+        Zum bloßen Einlesen vorhandener Dateien kann unten ein Ordner ausgewählt werden.
+        Dieser Fallback darf die Dateien jedoch nicht direkt überschreiben.
+      </p>
+      <div class="modal-actions">
+        <button class="ghost" id="folderReadFallbackBtn">Ordner nur einlesen</button>
+        <button class="primary" id="closeFolderSupport">Schließen</button>
+      </div>
+    `);
+    $('#folderReadFallbackBtn').onclick = () => {
+      closeModal();
+      $('#folderFallbackInput').click();
+    };
+    $('#closeFolderSupport').onclick = closeModal;
+  }
+
+  async function chooseDirectory() {
+    const button = $('#chooseFolderBtn');
+    const originalText = button.textContent;
+    button.disabled = true;
+    button.textContent = 'Öffne Dialog …';
+
+    try {
+      const nativeBridge = getNativeFileBridge();
+
+      if (nativeBridge) {
+        const result = await nativeBridge.chooseDirectory();
+        if (!result) return;
+
+        state.nativeFileBridge = nativeBridge;
+        state.storageMode = 'bridge';
+        state.settings.folderName =
+          (typeof result === 'string' ? result.split(/[\\/]/).pop() : result.name || result.path) ||
+          'App-Ordner';
+        state.settings.folderPath = typeof result === 'string' ? result : result.path || '';
+        saveLocal();
+        updateStorageStatus();
+        await syncAllToDisk();
+        toast('Speicherordner verbunden');
+        return;
+      }
+
+      if (window.__TAURI__) {
+        const result = await chooseDirectoryWithTauri();
+        if (result) {
+          state.storageMode = 'tauri';
+          state.settings.folderName = result.name || result.path || 'App-Ordner';
+          state.settings.folderPath = result.path || '';
+          saveLocal();
+          updateStorageStatus();
+          toast('Ordner ausgewählt. Zum Schreiben muss die Tauri-Dateibrücke eingebunden sein.');
+          return;
+        }
+      }
+
+      if (typeof window.showDirectoryPicker === 'function') {
+        const handle = await window.showDirectoryPicker({
+          id: 'diary-entry-folder',
+          mode: 'readwrite',
+          startIn: 'documents'
+        });
+
+        if (!handle) return;
+        state.directoryHandle = handle;
+        state.storageMode = 'directory';
+        state.settings.folderName = handle.name;
+        await persistDirectoryHandle(handle);
+
+        const granted = await ensureDirectoryPermission();
+        if (!granted) throw new Error('Der Schreibzugriff auf den Ordner wurde nicht erlaubt.');
+
+        saveLocal();
+        updateStorageStatus();
+        await syncAllToDisk();
+        toast('Speicherordner verbunden');
+        return;
+      }
+
+      showFolderSupportDialog();
+    } catch (error) {
+      if (error?.name === 'AbortError') return;
+      console.error('Ordnerauswahl fehlgeschlagen:', error);
+      showModal(`
+        <span class="eyebrow">FEHLER</span>
+        <h2>Ordner konnte nicht geöffnet werden</h2>
+        <p style="color:var(--muted);line-height:1.65">${escapeHtml(error?.message || 'Unbekannter Fehler')}</p>
+        <p class="template-help">Öffne die HTML-Datei in einem aktuellen Chromium-basierten Browser oder stelle in der Desktop-App eine native Dateibrücke bereit.</p>
+        <div class="modal-actions"><button class="primary" id="closeFolderError">Schließen</button></div>
+      `);
+      $('#closeFolderError').onclick = closeModal;
+    } finally {
+      button.disabled = false;
+      button.textContent = originalText;
+    }
+  }
+
+  async function ensureDirectoryPermission() {
+    if (!state.directoryHandle) return false;
+    if (typeof state.directoryHandle.queryPermission === 'function') {
+      if ((await state.directoryHandle.queryPermission({mode:'readwrite'})) === 'granted') return true;
+    }
+    if (typeof state.directoryHandle.requestPermission === 'function') {
+      return (await state.directoryHandle.requestPermission({mode:'readwrite'})) === 'granted';
+    }
+    return true;
+  }
+
+  async function writeEntryFile(entry) {
+    const text = serializeEntry(entry);
+    const filename = safeFileName(entry);
+    if (state.storageMode === 'bridge') {
+      const bridge = state.nativeFileBridge || getNativeFileBridge();
+      if (!bridge?.writeTextFile) throw new Error('Die native App stellt keine Schreibfunktion bereit.');
+      await bridge.writeTextFile(filename, text, state.settings.folderPath || '');
+      return;
+    }
+    if (state.storageMode === 'directory' && await ensureDirectoryPermission()) {
+      const fileHandle = await state.directoryHandle.getFileHandle(filename, {create:true});
+      const writable = await fileHandle.createWritable();
+      await writable.write(text);
+      await writable.close();
+    }
+  }
+
+  async function deleteEntryFile(entry) {
+    const filename = safeFileName(entry);
+    try {
+      if (state.storageMode === 'bridge') {
+        const bridge = state.nativeFileBridge || getNativeFileBridge();
+        if (bridge?.deleteFile) await bridge.deleteFile(filename, state.settings.folderPath || '');
+      } else if (state.storageMode === 'directory' && await ensureDirectoryPermission()) {
+        await state.directoryHandle.removeEntry(filename);
+      }
+    } catch (e) { console.warn('Datei konnte nicht gelöscht werden', e); }
+  }
+
+  async function syncAllToDisk() {
+    for (const e of state.entries) await writeEntryFile(e);
+  }
+
+  async function importFromFolder() {
+    const imported = [];
+    if (state.storageMode === 'bridge') {
+      const bridge = state.nativeFileBridge || getNativeFileBridge();
+      if (!bridge?.readTextFiles) throw new Error('Die native App stellt keine Lesefunktion bereit.');
+      const files = await bridge.readTextFiles(state.settings.folderPath || '');
+      for (const file of files || []) imported.push(parseEntry(file.content, file.name));
+    } else if (state.storageMode === 'directory' && await ensureDirectoryPermission()) {
+      for await (const [name, handle] of state.directoryHandle.entries()) {
+        if (handle.kind === 'file' && /\.(txt|md)$/i.test(name)) {
+          const file = await handle.getFile();
+          imported.push(parseEntry(await file.text(), name));
+        }
+      }
+    }
+    const byId = new Map(state.entries.map(e => [e.id,e]));
+    imported.forEach(e => byId.set(e.id,e));
+    state.entries = [...byId.values()];
+    saveLocal(); render();
+    toast(`${imported.length} Dateien eingelesen`);
+  }
+
+  function updateStorageStatus() {
+    const name = state.settings.folderName || state.directoryHandle?.name;
+    el.storageStatus.textContent = state.storageMode === 'local'
+      ? 'Lokaler App-Speicher'
+      : `Ordner: ${name || 'verbunden'}`;
+  }
+
+  function newEntry(templateText='') {
+    const e = normalizeEntry({
+      content: templateText,
+      entryDate: new Date().toISOString()
+    });
+    state.entries.unshift(e);
+    state.selectedId = e.id;
+    state.view = 'entries';
+    saveLocal();
+    render();
+    setTimeout(() => el.contentInput.focus(), 0);
+    scheduleSave(true);
+  }
+
+  function current() { return state.entries.find(e => e.id === state.selectedId); }
+
+  function updateCurrentFromEditor() {
+    const e = current(); if (!e) return;
+    e.content = el.contentInput.value;
+    e.entryDate = new Date(el.dateInput.value || Date.now()).toISOString();
+    e.mood = el.moodInput.value;
+    e.weather = el.weatherInput.value;
+    e.location = el.locationInput.value;
+    e.updatedAt = new Date().toISOString();
+    e.wordCount = (e.content.trim().match(/\S+/g) || []).length;
+  }
+
+  function scheduleSave(immediate=false) {
+    updateCurrentFromEditor();
+    el.saveState.textContent = 'Ungespeicherte Änderungen …';
+    clearTimeout(state.autosaveTimer);
+    const run = async () => {
+      const e = current(); if (!e) return;
+      saveLocal();
+      try {
+        await writeEntryFile(e);
+        el.saveState.textContent = state.storageMode === 'local' ? 'Lokal gespeichert' : 'Als Textdatei gespeichert';
+      } catch (err) {
+        console.error(err);
+        el.saveState.textContent = 'Lokal gespeichert · Dateifehler';
+      }
+      renderListOnly();
+    };
+    state.autosaveTimer = setTimeout(run, immediate ? 0 : 650);
+  }
+
+  function filteredEntries() {
+    const now = new Date();
+    return state.entries.filter(e => {
+      const d = new Date(e.entryDate);
+      if (state.view === 'onthisday' && !(d.getDate() === now.getDate() && d.getMonth() === now.getMonth() && d.getFullYear() !== now.getFullYear())) return false;
+      if (state.filter === 'today' && d.toDateString() !== now.toDateString()) return false;
+      if (state.filter === 'week' && now-d > 7*864e5) return false;
+      if (state.filter === 'month' && now-d > 30*864e5) return false;
+      if (state.filter === 'hasPhoto' && !e.attachments.length) return false;
+      const q = state.query.trim().toLowerCase();
+      if (q && ![e.content,e.location,e.weather,e.mood,...e.tags].join(' ').toLowerCase().includes(q)) return false;
+      return true;
+    }).sort((a,b) => new Date(b.entryDate)-new Date(a.entryDate));
+  }
+
+  function renderListOnly() {
+    const list = filteredEntries();
+    el.resultCount.textContent = `${list.length} ${list.length===1?'Eintrag':'Einträge'}`;
+    $('#allCount').textContent = state.entries.length;
+    const uniqueTags = new Set(state.entries.flatMap(e => e.tags));
+    $('#tagCount').textContent = uniqueTags.size;
+    const now = new Date();
+    $('#onThisDayCount').textContent = state.entries.filter(e => {
+      const d = new Date(e.entryDate);
+      return d.getDate()===now.getDate() && d.getMonth()===now.getMonth() && d.getFullYear()!==now.getFullYear();
+    }).length;
+
+    el.entryList.innerHTML = list.map(e => `
+      <article class="entry-card ${e.id===state.selectedId?'active':''}" data-id="${e.id}">
+        <button class="entry-open" data-open-id="${e.id}">
+          <div class="date">${new Intl.DateTimeFormat('de-DE',{weekday:'short',day:'2-digit',month:'short',year:'numeric'}).format(new Date(e.entryDate))}</div>
+          ${e.favorite?'<span class="star">★</span>':''}
+          <p>${escapeHtml(e.content.replace(/[#>*_`\[\]-]/g,' ').trim() || 'Noch kein Text')}</p>
+          <div class="entry-meta">
+            ${e.mood?`<span>${escapeHtml(e.mood.split(' ')[0])}</span>`:''}
+            ${e.tags.slice(0,3).map(t=>`<span class="tag-mini">#${escapeHtml(t)}</span>`).join('')}
+          </div>
+          <div class="word-count">${e.wordCount||0} Wörter</div>
+        </button>
+        <button class="card-delete" data-delete-id="${e.id}" title="Eintrag löschen">Eintrag löschen</button>
+      </article>`).join('') || `<div style="padding:30px;text-align:center;color:var(--muted)">Keine Einträge gefunden.</div>`;
+
+    $$('[data-open-id]').forEach(btn => btn.onclick = () => { state.selectedId = btn.dataset.openId; render(); });
+    $$('[data-delete-id]').forEach(btn => btn.onclick = async (event) => {
+      event.stopPropagation();
+      const entry = state.entries.find(x => x.id === btn.dataset.deleteId);
+      if (!entry || !confirm('Diesen Tagebucheintrag wirklich löschen?')) return;
+      await deleteEntryFile(entry);
+      state.entries = state.entries.filter(x => x.id !== entry.id);
+      if (state.selectedId === entry.id) state.selectedId = state.entries[0]?.id || null;
+      saveLocal();
+      render();
+      toast('Eintrag gelöscht');
+    });
+  }
+
+  function renderEditor() {
+    const e = current();
+    if (!e) {
+      el.editor.classList.add('hidden');
+      el.emptyState.classList.remove('hidden');
+      return;
+    }
+    el.emptyState.classList.add('hidden');
+    el.editor.classList.remove('hidden');
+    el.contentInput.value = e.content;
+    el.dateInput.value = nowLocalInput(new Date(e.entryDate));
+    el.moodInput.value = e.mood;
+    el.weatherInput.value = e.weather;
+    el.locationInput.value = e.location;
+    el.favoriteBtn.textContent = e.favorite ? '★' : '☆';
+    el.entryDateLabel.textContent = new Intl.DateTimeFormat('de-DE',{dateStyle:'full',timeStyle:'short'}).format(new Date(e.entryDate));
+    renderTags();
+    renderAttachments();
+    el.saveState.textContent = 'Bereit';
+  }
+
+  function renderTags() {
+    const e = current(); if (!e) return;
+    el.tagsRow.querySelectorAll('.tag-token').forEach(n=>n.remove());
+    e.tags.forEach(tag => {
+      const span = document.createElement('span');
+      span.className = 'tag-token';
+      span.innerHTML = `#${escapeHtml(tag)} <button aria-label="Tag entfernen">×</button>`;
+      span.querySelector('button').onclick = () => {
+        e.tags = e.tags.filter(t=>t!==tag); renderTags(); scheduleSave();
+      };
+      el.tagsRow.insertBefore(span, el.tagInput);
+    });
+  }
+
+  function renderAttachments() {
+    const e = current(); if (!e) return;
+    el.attachmentList.innerHTML = e.attachments.map((a,i)=>`
+      <span class="attachment">📎 ${escapeHtml(a.name)}
+        <button class="icon-btn" style="width:24px;height:24px" data-remove-attachment="${i}">×</button>
+      </span>`).join('');
+    $$('[data-remove-attachment]').forEach(b => b.onclick = () => {
+      e.attachments.splice(Number(b.dataset.removeAttachment),1);
+      renderAttachments(); scheduleSave();
+    });
+  }
+
+  function render() {
+    const titles = {entries:'Einträge',tags:'Tags',onthisday:'An diesem Tag',calendar:'Kalender',stats:'Statistik',templates:'Vorlagen'};
+    el.viewTitle.textContent = titles[state.view];
+    $$('.nav button').forEach(b=>b.classList.toggle('active',b.dataset.view===state.view));
+    renderListOnly();
+    if (['calendar','stats','templates','tags'].includes(state.view)) renderSpecialView();
+    else renderEditor();
+  }
+
+
+  function insertTextAtCursor(textToInsert) {
+    const textarea = el.contentInput;
+    const start = textarea.selectionStart ?? textarea.value.length;
+    const end = textarea.selectionEnd ?? start;
+    const before = textarea.value.slice(0, start);
+    const selected = textarea.value.slice(start, end);
+    const after = textarea.value.slice(end);
+    const needsBreakBefore = before && !before.endsWith('\n');
+    const needsBreakAfter = after && !after.startsWith('\n');
+    const insertion = `${needsBreakBefore ? '\n\n' : ''}${textToInsert}${needsBreakAfter ? '\n\n' : ''}`;
+    textarea.value = before + insertion + after;
+    const cursor = before.length + insertion.length;
+    textarea.setSelectionRange(cursor, cursor);
+    textarea.focus();
+    saveFromEditor();
+    toast('Vorlage eingefügt');
+  }
+
+  function templateEditor(template = null) {
+    const isEdit = !!template;
+    showModal(`
+      <div class="template-modal-heading">
+        <div>
+          <span class="eyebrow">VORLAGE</span>
+          <h2>${isEdit ? 'Vorlage bearbeiten' : 'Neue Vorlage erstellen'}</h2>
+        </div>
+      </div>
+      <div class="field"><label>Name</label><input id="templateNameInput" maxlength="80" placeholder="z. B. Abendreflexion"></div>
+      <div class="field template-content-field">
+        <label>Inhalt</label>
+        <textarea id="templateContentInput" placeholder="Schreibe Fragen, Überschriften oder eine wiederverwendbare Struktur …"></textarea>
+      </div>
+      <p class="template-help">Markdown wie <code>## Überschrift</code>, Listen und Hervorhebungen kann verwendet werden.</p>
+      <div class="modal-actions">
+        <button class="ghost" id="cancelTemplateEditor">Abbrechen</button>
+        <button class="primary" id="saveTemplateEditor">${isEdit ? 'Änderungen speichern' : 'Vorlage erstellen'}</button>
+      </div>
+    `);
+    $('#templateNameInput').value = template?.name || '';
+    $('#templateContentInput').value = template?.content || '';
+    $('#cancelTemplateEditor').onclick = closeModal;
+    $('#saveTemplateEditor').onclick = () => {
+      const name = $('#templateNameInput').value.trim();
+      const content = $('#templateContentInput').value;
+      if (!name) return toast('Bitte einen Namen eingeben');
+      if (!content.trim()) return toast('Die Vorlage ist noch leer');
+
+      if (isEdit) {
+        const item = state.templates.find(value => value.id === template.id);
+        if (item) {
+          item.name = name;
+          item.content = content;
+          item.updatedAt = new Date().toISOString();
+        }
+      } else {
+        state.templates.push(normalizeTemplate({name, content}));
+      }
+      saveTemplates();
+      closeModal();
+      if (state.view === 'templates') renderSpecialView();
+      toast(isEdit ? 'Vorlage gespeichert' : 'Vorlage erstellt');
+    };
+  }
+
+  function deleteTemplate(template) {
+    if (!confirm(`Vorlage „${template.name}“ wirklich löschen?`)) return;
+    state.templates = state.templates.filter(item => item.id !== template.id);
+    saveTemplates();
+    renderSpecialView();
+    toast('Vorlage gelöscht');
+  }
+
+  function showTemplatePicker() {
+    if (!current()) return toast('Öffne zuerst einen Eintrag');
+    showModal(`
+      <div class="template-picker-heading">
+        <div>
+          <span class="eyebrow">EINFÜGEN</span>
+          <h2>Vorlage auswählen</h2>
+          <p>Der Inhalt wird an der Cursorposition ergänzt. Bereits geschriebener Text bleibt erhalten.</p>
+        </div>
+        <button class="primary" id="pickerCreateTemplate">＋ Neue Vorlage</button>
+      </div>
+      <div class="template-picker-list">
+        ${state.templates.length ? state.templates.map(template => `
+          <button class="template-picker-item" data-picker-template="${template.id}">
+            <span class="template-picker-icon">✦</span>
+            <span><strong>${escapeHtml(template.name)}</strong><small>${escapeHtml(template.content.replace(/[#>*_`\[\]-]/g,' ').trim().slice(0,120))}</small></span>
+          </button>
+        `).join('') : '<div class="tag-empty"><div>✦</div><h3>Noch keine Vorlagen</h3></div>'}
+      </div>
+      <div class="modal-actions"><button class="ghost" id="closeTemplatePicker">Schließen</button></div>
+    `);
+    $$('[data-picker-template]').forEach(button => button.onclick = () => {
+      const template = state.templates.find(item => item.id === button.dataset.pickerTemplate);
+      closeModal();
+      if (template) insertTextAtCursor(template.content);
+    });
+    $('#pickerCreateTemplate').onclick = () => templateEditor();
+    $('#closeTemplatePicker').onclick = closeModal;
+  }
+
+  function renderSpecialView() {
+    el.editor.classList.add('hidden');
+    el.emptyState.classList.add('hidden');
+    const host = $('#mainPane');
+    let panel = $('#specialPanel');
+    if (!panel) {
+      panel = document.createElement('div');
+      panel.id = 'specialPanel';
+      panel.className = 'editor-scroll';
+      panel.style.height = '100%';
+      host.appendChild(panel);
+    }
+    panel.classList.remove('hidden');
+
+
+    if (state.view === 'tags') {
+      const tagMap = new Map();
+      state.entries.forEach(entry => {
+        entry.tags.forEach(tag => {
+          const key = tag.trim();
+          if (!key) return;
+          if (!tagMap.has(key)) tagMap.set(key, []);
+          tagMap.get(key).push(entry);
+        });
+      });
+
+      const tags = [...tagMap.entries()]
+        .sort((a,b) => b[1].length - a[1].length || a[0].localeCompare(b[0], 'de'));
+
+      panel.innerHTML = `
+        <div class="tag-page-header">
+          <div>
+            <span class="eyebrow">ORGANISIEREN</span>
+            <h1>Tags</h1>
+            <p>Ordne Einträge nach Themen, Personen oder Lebensbereichen.</p>
+          </div>
+          <div class="tag-summary">${tags.length} ${tags.length === 1 ? 'Tag' : 'Tags'}</div>
+        </div>
+
+        <div class="tag-search-row">
+          <input id="tagPageSearch" type="search" placeholder="Tags durchsuchen …">
+        </div>
+
+        <div class="tag-layout">
+          <section class="tag-browser">
+            <div class="tag-list" id="tagList">
+              ${tags.length ? tags.map(([tag, entries]) => `
+                <article class="tag-list-item" data-tag-name="${escapeHtml(tag)}">
+                  <button class="tag-main" data-open-tag="${escapeHtml(tag)}">
+                    <span class="tag-symbol">#</span>
+                    <span class="tag-name">${escapeHtml(tag)}</span>
+                    <span class="tag-entry-count">${entries.length} ${entries.length === 1 ? 'Eintrag' : 'Einträge'}</span>
+                  </button>
+                  <button class="tag-menu-button" data-tag-menu="${escapeHtml(tag)}" title="Tag verwalten">•••</button>
+                </article>
+              `).join('') : `
+                <div class="tag-empty">
+                  <div>#</div>
+                  <h3>Noch keine Tags</h3>
+                  <p>Füge einem Eintrag unten im Schreibbereich einen Tag hinzu.</p>
+                </div>
+              `}
+            </div>
+          </section>
+
+          <section class="tag-results" id="tagResults">
+            <div class="tag-results-empty">
+              <div class="tag-large-symbol">#</div>
+              <h2>Wähle einen Tag</h2>
+              <p>Hier erscheinen anschließend alle zugehörigen Einträge.</p>
+            </div>
+          </section>
+        </div>`;
+
+      const renderTagResults = tag => {
+        const entries = tagMap.get(tag) || [];
+        state.selectedTag = tag;
+        $('#tagResults').innerHTML = `
+          <div class="tag-result-header">
+            <div>
+              <span class="eyebrow">TAG</span>
+              <h2>#${escapeHtml(tag)}</h2>
+              <p>${entries.length} ${entries.length === 1 ? 'Eintrag' : 'Einträge'}</p>
+            </div>
+            <button class="ghost" id="renameActiveTag">Umbenennen</button>
+          </div>
+          <div class="tag-entry-grid">
+            ${entries
+              .sort((a,b) => new Date(b.entryDate) - new Date(a.entryDate))
+              .map(entry => `
+                <button class="tag-entry-card" data-tag-entry-id="${entry.id}">
+                  <span>${new Intl.DateTimeFormat('de-DE',{day:'2-digit',month:'long',year:'numeric'}).format(new Date(entry.entryDate))}</span>
+                  <p>${escapeHtml(entry.content.replace(/[#>*_`\[\]-]/g,' ').trim() || 'Noch kein Text')}</p>
+                  <strong>${entry.wordCount || 0} Wörter</strong>
+                </button>
+              `).join('')}
+          </div>`;
+
+        $$('[data-tag-entry-id]').forEach(btn => btn.onclick = () => {
+          state.selectedId = btn.dataset.tagEntryId;
+          state.view = 'entries';
+          hideSpecial();
+          render();
+        });
+        $('#renameActiveTag').onclick = () => renameTag(tag);
+        $$('[data-open-tag]').forEach(btn => {
+          btn.closest('.tag-list-item').classList.toggle('active', btn.dataset.openTag === tag);
+        });
+      };
+
+      const renameTag = oldTag => {
+        const newTag = prompt('Neuer Name für den Tag:', oldTag);
+        if (newTag === null) return;
+        const clean = newTag.trim().replace(/^#/, '');
+        if (!clean || clean === oldTag) return;
+        state.entries.forEach(entry => {
+          if (entry.tags.includes(oldTag)) {
+            entry.tags = [...new Set(entry.tags.map(tag => tag === oldTag ? clean : tag))];
+            entry.updatedAt = new Date().toISOString();
+          }
+        });
+        saveLocal();
+        syncAllToDisk().catch(console.warn);
+        state.selectedTag = clean;
+        renderSpecialView();
+        toast('Tag umbenannt');
+      };
+
+      const deleteTag = tag => {
+        if (!confirm(`Tag „#${tag}“ aus allen Einträgen entfernen? Die Einträge selbst bleiben erhalten.`)) return;
+        state.entries.forEach(entry => {
+          entry.tags = entry.tags.filter(item => item !== tag);
+          entry.updatedAt = new Date().toISOString();
+        });
+        saveLocal();
+        syncAllToDisk().catch(console.warn);
+        state.selectedTag = null;
+        renderSpecialView();
+        toast('Tag entfernt');
+      };
+
+      $$('[data-open-tag]').forEach(btn => btn.onclick = () => renderTagResults(btn.dataset.openTag));
+      $$('[data-tag-menu]').forEach(btn => btn.onclick = event => {
+        event.stopPropagation();
+        const tag = btn.dataset.tagMenu;
+        showModal(`
+          <h2>#${escapeHtml(tag)}</h2>
+          <p style="color:var(--muted)">Dieser Tag ist ${tagMap.get(tag).length} ${tagMap.get(tag).length === 1 ? 'Eintrag' : 'Einträgen'} zugeordnet.</p>
+          <div style="display:grid;gap:8px;margin-top:18px">
+            <button class="ghost" id="modalRenameTag">Tag umbenennen</button>
+            <button class="danger" id="modalDeleteTag">Tag aus allen Einträgen entfernen</button>
+          </div>
+          <div class="modal-actions"><button class="ghost" id="closeTagModal">Schließen</button></div>
+        `);
+        $('#modalRenameTag').onclick = () => { closeModal(); renameTag(tag); };
+        $('#modalDeleteTag').onclick = () => { closeModal(); deleteTag(tag); };
+        $('#closeTagModal').onclick = closeModal;
+      });
+
+      $('#tagPageSearch').oninput = event => {
+        const q = event.target.value.trim().toLowerCase();
+        $$('.tag-list-item').forEach(item => {
+          item.classList.toggle('hidden', !item.dataset.tagName.toLowerCase().includes(q));
+        });
+      };
+
+      if (state.selectedTag && tagMap.has(state.selectedTag)) renderTagResults(state.selectedTag);
+      else if (tags.length) renderTagResults(tags[0][0]);
+    }
+
+    if (state.view === 'templates') {
+      panel.innerHTML = `
+        <div class="templates-page-header">
+          <div>
+            <span class="eyebrow">SCHREIBHILFEN</span>
+            <h1>Vorlagen</h1>
+            <p>Erstelle wiederverwendbare Strukturen und füge sie später in einen geöffneten Eintrag ein.</p>
+          </div>
+          <button class="primary" id="createTemplateBtn">＋ Neue Vorlage</button>
+        </div>
+        <div class="templates-manage-grid">
+          ${state.templates.length ? state.templates
+            .sort((a,b) => a.name.localeCompare(b.name, 'de'))
+            .map(template => `
+              <article class="template-manage-card">
+                <div class="template-card-top">
+                  <span class="template-card-symbol">✦</span>
+                  <div>
+                    <strong>${escapeHtml(template.name)}</strong>
+                    <small>${(template.content.trim().match(/\S+/g) || []).length} Wörter</small>
+                  </div>
+                </div>
+                <div class="template-preview">${markdown(template.content.slice(0,500))}</div>
+                <div class="template-card-actions">
+                  <button class="ghost" data-use-template="${template.id}">In neuen Eintrag</button>
+                  <button class="ghost" data-edit-template="${template.id}">Bearbeiten</button>
+                  <button class="danger" data-delete-template="${template.id}">Löschen</button>
+                </div>
+              </article>
+            `).join('') : `
+              <div class="templates-empty">
+                <div>✦</div>
+                <h2>Noch keine Vorlagen</h2>
+                <p>Erstelle deine erste Vorlage mit wiederkehrenden Fragen oder Überschriften.</p>
+                <button class="primary" id="emptyCreateTemplate">Vorlage erstellen</button>
+              </div>
+            `}
+        </div>`;
+
+      $('#createTemplateBtn').onclick = () => templateEditor();
+      if ($('#emptyCreateTemplate')) $('#emptyCreateTemplate').onclick = () => templateEditor();
+      $$('[data-edit-template]').forEach(button => button.onclick = () => {
+        const template = state.templates.find(item => item.id === button.dataset.editTemplate);
+        if (template) templateEditor(template);
+      });
+      $$('[data-delete-template]').forEach(button => button.onclick = () => {
+        const template = state.templates.find(item => item.id === button.dataset.deleteTemplate);
+        if (template) deleteTemplate(template);
+      });
+      $$('[data-use-template]').forEach(button => button.onclick = () => {
+        const template = state.templates.find(item => item.id === button.dataset.useTemplate);
+        if (template) {
+          hideSpecial();
+          newEntry(template.content);
+        }
+      });
+    }
+
+    if (state.view === 'stats') {
+      const counts = state.entries.map(e => e.wordCount || (e.content.trim().match(/\S+/g) || []).length);
+      const total = counts.reduce((sum, value) => sum + value, 0);
+      const minimum = counts.length ? Math.min(...counts) : 0;
+      const maximum = counts.length ? Math.max(...counts) : 0;
+      const average = counts.length ? Math.round(total / counts.length) : 0;
+      panel.innerHTML = `
+        <h1>Statistik</h1>
+        <p style="color:var(--muted)">Eine kompakte Übersicht über dein Tagebuch.</p>
+        <div class="stats-grid stats-five">
+          <div class="stat"><strong>${state.entries.length}</strong><span>Einträge</span></div>
+          <div class="stat"><strong>${minimum.toLocaleString('de-DE')}</strong><span>minimale Wortzahl</span></div>
+          <div class="stat"><strong>${maximum.toLocaleString('de-DE')}</strong><span>maximale Wortzahl</span></div>
+          <div class="stat"><strong>${average.toLocaleString('de-DE')}</strong><span>durchschnittliche Wortzahl</span></div>
+          <div class="stat"><strong>${total.toLocaleString('de-DE')}</strong><span>Wörter gesamt</span></div>
+        </div>`;
+    }
+
+    if (state.view === 'calendar') {
+      const now = new Date();
+      const y=now.getFullYear(), m=now.getMonth();
+      const first = new Date(y,m,1), days = new Date(y,m+1,0).getDate();
+      const offset=(first.getDay()+6)%7;
+      let cells = Array(offset).fill('<div></div>');
+      for(let d=1;d<=days;d++){
+        const found=state.entries.filter(e=>{const x=new Date(e.entryDate);return x.getFullYear()===y&&x.getMonth()===m&&x.getDate()===d});
+        cells.push(`<button class="template-card" style="min-height:86px;margin:0;text-align:left" data-calendar-day="${d}">
+          <strong>${d}</strong><div style="margin-top:8px;color:var(--accent);font-size:12px">${found.length?`${found.length} Eintrag${found.length>1?'e':''}`:''}</div></button>`);
+      }
+      panel.innerHTML=`<h1>${now.toLocaleDateString('de-DE',{month:'long',year:'numeric'})}</h1>
+        <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:8px;margin-top:18px">
+        ${['Mo','Di','Mi','Do','Fr','Sa','So'].map(x=>`<strong style="text-align:center;color:var(--muted)">${x}</strong>`).join('')}
+        ${cells.join('')}</div>`;
+      $$('[data-calendar-day]').forEach(btn=>btn.onclick=()=>{
+        const target=state.entries.find(e=>{const x=new Date(e.entryDate);return x.getFullYear()===y&&x.getMonth()===m&&x.getDate()===Number(btn.dataset.calendarDay)});
+        if(target){state.selectedId=target.id;state.view='entries';render()} else {
+          const d=new Date(y,m,Number(btn.dataset.calendarDay),12);
+          newEntry(); current().entryDate=d.toISOString(); render();
+        }
+      });
+    }
+  }
+
+  function hideSpecial() {
+    $('#specialPanel')?.classList.add('hidden');
+  }
+
+  async function addAttachments(files) {
+    const e = current(); if (!e) return;
+    for (const file of files) {
+      const meta = {name:file.name,type:file.type,size:file.size,addedAt:new Date().toISOString()};
+      if (state.storageMode === 'directory' && await ensureDirectoryPermission()) {
+        try {
+          const root = await state.directoryHandle.getDirectoryHandle('attachments',{create:true});
+          const sub = await root.getDirectoryHandle(e.id,{create:true});
+          const fh = await sub.getFileHandle(file.name,{create:true});
+          const w = await fh.createWritable(); await w.write(file); await w.close();
+          meta.path = `attachments/${e.id}/${file.name}`;
+        } catch {}
+      } else if (state.storageMode === 'bridge' && window.diaryBridge?.writeBinaryFile) {
+        const data = await file.arrayBuffer();
+        await window.diaryBridge.writeBinaryFile(`attachments/${e.id}/${file.name}`, data);
+        meta.path = `attachments/${e.id}/${file.name}`;
+      } else {
+        meta.note = 'Nur als Referenz gespeichert; für echte Dateikopie Speicherordner verbinden.';
+      }
+      e.attachments.push(meta);
+    }
+    renderAttachments(); scheduleSave(); toast(`${files.length} Anhang/Anhänge hinzugefügt`);
+  }
+
+  function showModal(html) {
+    el.modal.innerHTML = html;
+    el.modalBackdrop.classList.remove('hidden');
+  }
+  function closeModal(){ el.modalBackdrop.classList.add('hidden'); }
+
+
+  function settingsModal() {
+    showModal(`
+      <h2>Einstellungen</h2>
+      <div class="modal-grid">
+        <div class="field"><label>Design</label><select id="themeSetting">
+          <option value="system">System</option><option value="light">Hell</option><option value="dark">Dunkel</option>
+        </select></div>
+        <div class="field"><label>Dateiendung</label><select id="extSetting">
+          <option value="txt">.txt</option><option value="md">.md</option>
+        </select></div>
+      </div>
+      <h3 style="margin-top:22px">Sicherheit</h3>
+      <div class="modal-grid">
+        <div class="field"><label>Passwortschutz</label><select id="passwordSetting">
+          <option value="off">Aus</option><option value="on">Ein</option>
+        </select></div>
+        <div class="field"><label>Automatisch sperren</label><select id="autoLockSetting">
+          <option value="0">Nie</option><option value="1">Nach 1 Minute</option>
+          <option value="5">Nach 5 Minuten</option><option value="15">Nach 15 Minuten</option>
+          <option value="30">Nach 30 Minuten</option>
+        </select></div>
+      </div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px">
+        <button class="ghost" id="changePasswordBtn">Passwort ändern</button>
+      </div>
+
+      <h3 style="margin-top:22px">Daten</h3>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <button class="ghost" id="syncBtn">Alle Einträge in Ordner schreiben</button>
+        <button class="ghost" id="importFolderBtn">Textdateien aus Ordner einlesen</button>
+        <button class="ghost" id="backupBtn">JSON-Sicherung exportieren</button>
+        <button class="ghost" id="restoreBtn">JSON-Sicherung importieren</button>
+        <input id="restoreFile" type="file" accept=".json" class="hidden">
+      </div>
+      <p style="color:var(--muted);font-size:12px;line-height:1.6;margin-top:20px">
+        Für eine Desktop-App sollte die HTML-Datei in Electron, Tauri oder einem Chromium-WebView laufen.
+        Direkter Dateizugriff erfolgt über die File System Access API oder eine bereitgestellte <code>window.diaryBridge</code>.
+      </p>
+      <div class="modal-actions"><button class="ghost" id="closeSettings">Schließen</button><button class="primary" id="saveSettings">Speichern</button></div>
+    `);
+    $('#themeSetting').value=state.settings.theme;
+    $('#extSetting').value=state.settings.fileExtension;
+    $('#passwordSetting').value=state.settings.passwordEnabled ? 'on' : 'off';
+    $('#autoLockSetting').value=String(state.settings.autoLockMinutes || 0);
+    $('#closeSettings').onclick=closeModal;
+    $('#saveSettings').onclick=()=>{
+      const wantedPassword = $('#passwordSetting').value === 'on';
+      const hadPassword = state.settings.passwordEnabled;
+      state.settings.theme=$('#themeSetting').value;
+      state.settings.fileExtension=$('#extSetting').value;
+      state.settings.autoLockMinutes=Number($('#autoLockSetting').value || 0);
+      localStorage.setItem('diary-theme',state.settings.theme);
+      localStorage.setItem('diary-auto-lock', String(state.settings.autoLockMinutes));
+      saveLocal();applyTheme();closeModal();
+
+      if (wantedPassword && !hadPassword) {
+        showLock('setup');
+      } else if (!wantedPassword && hadPassword) {
+        removePasswordProtection();
+      } else {
+        resetAutoLock();
+        toast('Einstellungen gespeichert');
+      }
+    };
+    $('#syncBtn').onclick=async()=>{await syncAllToDisk();toast('Alle Einträge synchronisiert')};
+    $('#importFolderBtn').onclick=importFromFolder;
+    $('#backupBtn').onclick=()=>{
+      downloadBlob(new Blob([JSON.stringify({version:2,entries:state.entries,templates:state.templates,settings:state.settings},null,2)],{type:'application/json'}),'diary-backup.json');
+    };
+    $('#restoreBtn').onclick=()=>$('#restoreFile').click();
+    $('#changePasswordBtn').onclick=async()=>{
+      if (!state.settings.passwordEnabled) {
+        closeModal();
+        showLock('setup');
+        return;
+      }
+      const current = prompt('Aktuelles Passwort eingeben:');
+      if (current === null) return;
+      const storedHash = localStorage.getItem('diary-password-hash');
+      if (await hashPassword(current) !== storedHash) return toast('Passwort nicht korrekt');
+      closeModal();
+      showLock('setup');
+    };
+    $('#restoreFile').onchange=async ev=>{
+      try {
+        const data=JSON.parse(await ev.target.files[0].text());
+        state.entries=(data.entries||[]).map(normalizeEntry);
+        state.settings={...state.settings,...(data.settings||{})};
+        if (Array.isArray(data.templates)) state.templates=data.state.templates.map(normalizeTemplate);
+        saveLocal();saveTemplates();render();toast('Sicherung importiert');closeModal();
+      } catch {toast('Ungültige Sicherungsdatei')}
+    };
+  }
+
+  function downloadBlob(blob, name) {
+    const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=name;a.click();
+    setTimeout(()=>URL.revokeObjectURL(a.href),1000);
+  }
+
+  function exportCurrent() {
+    const e=current();if(!e)return;
+    downloadBlob(new Blob([serializeEntry(e)],{type:'text/plain;charset=utf-8'}),safeFileName(e));
+  }
+
+  async function deleteCurrent() {
+    const e=current();if(!e)return;
+    if(!confirm('Diesen Tagebucheintrag wirklich löschen?'))return;
+    await deleteEntryFile(e);
+    state.entries=state.entries.filter(x=>x.id!==e.id);
+    state.selectedId=state.entries[0]?.id||null;
+    saveLocal();render();toast('Eintrag gelöscht');
+  }
+
+  function duplicateCurrent() {
+    const e=current();if(!e)return;
+    const copy=normalizeEntry({...e,id:uid(),createdAt:new Date().toISOString(),updatedAt:new Date().toISOString()});
+    state.entries.unshift(copy);state.selectedId=copy.id;saveLocal();render();scheduleSave(true);
+  }
+
+  function insertMarkdown(pattern) {
+    const ta=el.contentInput, [before,after='']=pattern.split('|');
+    const s=ta.selectionStart,e=ta.selectionEnd,sel=ta.value.slice(s,e);
+    ta.setRangeText(before+sel+after,s,e,'end');ta.focus();scheduleSave();
+  }
+
+  // Events
+  $('#newEntryBtn').onclick=()=>{hideSpecial();newEntry()};
+  $('#chooseFolderBtn').onclick=chooseDirectory;
+
+  $('#folderFallbackInput').onchange = async event => {
+    const files = [...event.target.files].filter(file => /\.(txt|md)$/i.test(file.name));
+    const imported = [];
+    for (const file of files) {
+      try {
+        imported.push(parseEntry(await file.text(), file.name));
+      } catch (error) {
+        console.warn('Datei konnte nicht eingelesen werden:', file.name, error);
+      }
+    }
+    const byId = new Map(state.entries.map(entry => [entry.id, entry]));
+    imported.forEach(entry => byId.set(entry.id, entry));
+    state.entries = [...byId.values()];
+    saveLocal();
+    render();
+    event.target.value = '';
+    toast(`${imported.length} Dateien eingelesen`);
+  };
+
+  $('#settingsBtn').onclick=settingsModal;
+  $('#lockNowBtn').onclick=lockNow;
+  $('#unlockBtn').onclick=handleUnlock;
+  el.lockPasswordInput.addEventListener('keydown',e=>{if(e.key==='Enter')handleUnlock()});
+  el.lockPasswordConfirm.addEventListener('keydown',e=>{if(e.key==='Enter')handleUnlock()});
+  ['click','keydown','mousemove','touchstart'].forEach(type=>window.addEventListener(type,()=>{if(!state.isLocked)resetAutoLock()},{passive:true}));
+
+  $('#deleteBtn').onclick=deleteCurrent;
+  $('#duplicateBtn').onclick=duplicateCurrent;
+  $('#exportEntryBtn').onclick=exportCurrent;
+  $('#favoriteBtn').onclick=()=>{const e=current();if(!e)return;e.favorite=!e.favorite;el.favoriteBtn.textContent=e.favorite?'★':'☆';scheduleSave(true)};
+  $('#attachBtn').onclick=()=>$('#attachmentInput').click();
+  $('#attachmentInput').onchange=e=>addAttachments([...e.target.files]);
+  el.modalBackdrop.onclick=e=>{if(e.target===el.modalBackdrop)closeModal()};
+  el.searchInput.oninput=e=>{state.query=e.target.value;renderListOnly()};
+  $$('.filters .chip').forEach(btn=>btn.onclick=()=>{
+    state.filter=btn.dataset.filter;
+    $$('.filters .chip').forEach(x=>x.classList.toggle('active',x===btn));
+    renderListOnly();
+  });
+  $$('.nav button').forEach(btn=>btn.onclick=()=>{
+    state.view=btn.dataset.view;
+    if (state.view !== 'tags') state.selectedTag = null;
+    hideSpecial();
+    render();
+  });
+  [el.contentInput,el.dateInput,el.moodInput,el.weatherInput,el.locationInput].forEach(input=>{
+    input.addEventListener('input',()=>scheduleSave());
+    input.addEventListener('change',()=>scheduleSave());
+  });
+  el.tagInput.onkeydown=e=>{
+    if(e.key==='Enter'||e.key===','){
+      e.preventDefault();const tag=el.tagInput.value.trim().replace(/^#/,'');
+      const cur=current();if(tag&&cur&&!cur.tags.includes(tag)){cur.tags.push(tag);renderTags();scheduleSave()}
+      el.tagInput.value='';
+    }
+  };
+  $$('.toolbar [data-md]').forEach(b=>b.onclick=()=>insertMarkdown(b.dataset.md));
+  $('#insertTemplateBtn').onclick=showTemplatePicker;
+  $('#previewTab').onclick=()=>{el.preview.innerHTML=markdown(el.contentInput.value);el.contentInput.classList.add('hidden');el.preview.classList.remove('hidden')};
+  $('#writeTab').onclick=()=>{el.preview.classList.add('hidden');el.contentInput.classList.remove('hidden')};
+  window.addEventListener('keydown',e=>{
+    if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='n'){e.preventDefault();newEntry()}
+    if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='s'){e.preventDefault();scheduleSave(true)}
+    if(e.key==='Escape')closeModal();
+  });
+
+  // Init
+  try {
+    state.entries=(JSON.parse(localStorage.getItem('diary-entries')||'[]')).map(normalizeEntry);
+    state.settings={...state.settings,...JSON.parse(localStorage.getItem('diary-settings')||'{}')};
+  } catch {}
+  loadTemplates();
+  state.selectedId=state.entries[0]?.id||null;
+  applyTheme(); updateStorageStatus(); render(); restoreDirectoryHandle();
+  if (state.settings.passwordEnabled && localStorage.getItem('diary-password-hash')) showLock('unlock');
+  else resetAutoLock();
+})();
+</script>
+</body>
+</html>
